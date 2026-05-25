@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-server/
+
+# Tauri
+receiver-tauri/src-tauri/target/
+receiver-tauri/src-tauri/gen/
+receiver-tauri/src-tauri/Cargo.lock
+receiver-tauri/src-tauri/icons/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env

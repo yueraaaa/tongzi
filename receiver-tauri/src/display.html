@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>通知</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #1a1a2e;
+      color: #fff;
+      font-family: "Microsoft YaHei", "PingFang SC", "SimHei", sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; user-select: none; cursor: default;
+    }
+    .container {
+      text-align: center; padding: 60px;
+      animation: fadeIn 0.5s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .label {
+      font-size: 26px; color: rgba(255,255,255,0.45);
+      margin-bottom: 36px; letter-spacing: 4px;
+    }
+    .message {
+      font-size: min(8vw, 80px); font-weight: 700;
+      line-height: 1.35; letter-spacing: 2px;
+      word-break: break-word; max-width: 90vw;
+    }
+    .close-btn {
+      position: fixed; bottom: 40px; right: 40px;
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 12px 36px; font-size: 18px;
+      border-radius: 6px; cursor: pointer;
+      transition: all 0.2s; letter-spacing: 2px;
+    }
+    .close-btn:hover {
+      background: rgba(255,255,255,0.18); color: #fff;
+    }
+    .countdown {
+      position: fixed; bottom: 54px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px; color: rgba(255,255,255,0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="label">老师通知</div>
+    <div class="message" id="messageText">加载中...</div>
+  </div>
+  <button class="close-btn" id="closeBtn">关闭</button>
+  <div class="countdown" id="countdown"></div>
+
+  <script>
+    var msgEl = document.getElementById('messageText');
+    var countdownEl = document.getElementById('countdown');
+    var msg = '';
+
+    function closeWindow() {
+      window.__TAURI__.core.invoke('close_notification');
+    }
+
+    document.getElementById('closeBtn').addEventListener('click', closeWindow);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeWindow();
+    });
+
+    // Get message from the main process event
+    window.__TAURI__.event.listen('notification-message', function(event) {
+      msg = event.payload;
+      msgEl.textContent = msg;
+      document.title = msg;
+      speak();
+    });
+
+    // Fallback: try to emit ready signal, then listen
+    window.__TAURI__.event.emit('notification-ready');
+
+    function speak() {
+      if (!('speechSynthesis' in window)) {
+        startCountdown(10);
+        return;
+      }
+      window.speechSynthesis.cancel();
+
+      var utter = new SpeechSynthesisUtterance(msg);
+      utter.lang = 'zh-CN';
+      utter.rate = 0.9;
+      utter.pitch = 1;
+      utter.volume = 1;
+
+      function trySpeak() {
+        var voices = speechSynthesis.getVoices();
+        var zhVoice = voices.find(function(v) { return v.lang.indexOf('zh') === 0; });
+        if (zhVoice) utter.voice = zhVoice;
+        utter.onend = function() { startCountdown(8); };
+        utter.onerror = function() { startCountdown(10); };
+        window.speechSynthesis.speak(utter);
+      }
+
+      // Chrome: voices load async
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = function() {
+          speechSynthesis.onvoiceschanged = null;
+          trySpeak();
+        };
+      }
+      setTimeout(function() {
+        if (!speechSynthesis.speaking) trySpeak();
+      }, 400);
+    }
+
+    function startCountdown(seconds) {
+      var remaining = seconds;
+      function tick() {
+        if (remaining <= 0) { closeWindow(); return; }
+        countdownEl.textContent = remaining + ' 秒后自动关闭';
+        remaining--;
+        setTimeout(tick, 1000);
+      }
+      tick();
+    }
+
+    // Auto-close after 60s as safety net
+    setTimeout(function() {
+      if (msgEl.textContent !== '加载中...' && !countdownEl.textContent) {
+        startCountdown(5);
+      }
+    }, 60000);
+  </script>
+</body>
+</html>

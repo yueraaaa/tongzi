@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>教室通知接收端</title>
+  <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
+  <style>
+    body { background: transparent; margin: 0; }
+  </style>
+</head>
+<body>
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+
+    let socket = null;
+    let config = { room: '1班', server_url: 'http://localhost:3000' };
+
+    async function connect() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+      config = await invoke('get_config');
+      console.log('[接收端] 连接到 ' + config.server_url + ', 教室: ' + config.room);
+
+      socket = io(config.server_url, {
+        query: { room: config.room },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+      });
+
+      socket.on('connect', function() {
+        console.log('[接收端] 已连接');
+      });
+
+      socket.on('notification', async function(data) {
+        console.log('[接收端] 收到通知: ' + data.message);
+        await invoke('show_notification', { message: data.message });
+      });
+
+      socket.on('disconnect', function() {
+        console.log('[接收端] 断开连接');
+      });
+
+      socket.on('connect_error', function(err) {
+        console.error('[接收端] 连接错误: ' + err.message);
+      });
+    }
+
+    listen('reconnect', function() {
+      console.log('[接收端] 收到重连信号');
+      connect();
+    });
+
+    connect();
+  </script>
+</body>
+</html>
