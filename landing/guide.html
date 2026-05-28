@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使用手册 — 师说</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    font-family: "PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+    color: #333; background: #fafafa; line-height:1.8;
+  }
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #eee;
+    padding: 0 40px; height:56px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  nav .logo { font-size:18px; font-weight:700; color:#1a1a2e; }
+  nav .links { display:flex; gap:24px; font-size:14px; }
+  nav .links a { color:#666; text-decoration:none; }
+  nav .links a:hover { color:#4caf50; }
+
+  .container { max-width:860px; margin:0 auto; padding:80px 24px 60px; }
+
+  .page-title {
+    text-align:center; margin-bottom:48px; padding-top:16px;
+  }
+  .page-title h1 { font-size:34px; font-weight:800; color:#1a1a2e; margin-bottom:8px; }
+  .page-title p { font-size:15px; color:#999; }
+
+  .toc {
+    background:#fff; border:1px solid #eee; border-radius:10px;
+    padding:24px 28px; margin-bottom:40px;
+  }
+  .toc h2 { font-size:16px; margin-bottom:12px; color:#555; }
+  .toc ol { padding-left:20px; }
+  .toc li { margin-bottom:6px; font-size:14px; }
+  .toc a { color:#4caf50; text-decoration:none; }
+  .toc a:hover { text-decoration:underline; }
+
+  section { margin-bottom:48px; }
+  section h2 {
+    font-size:22px; font-weight:700; color:#1a1a2e;
+    padding-bottom:10px; border-bottom:2px solid #4caf50; margin-bottom:20px;
+  }
+  section h3 { font-size:17px; font-weight:600; color:#333; margin:20px 0 10px; }
+  section p { font-size:15px; color:#555; margin-bottom:12px; }
+  section ul, section ol { padding-left:22px; margin-bottom:14px; }
+  section li { font-size:14px; color:#555; margin-bottom:6px; }
+  section strong { color:#333; }
+
+  .card {
+    background:#fff; border:1px solid #eee; border-radius:8px;
+    padding:20px 24px; margin-bottom:16px;
+  }
+  .card h4 { font-size:15px; color:#1a1a2e; margin-bottom:6px; }
+  .card p { font-size:14px; color:#777; margin:0; }
+
+  .tip {
+    background:#f1f8e9; border-left:4px solid #4caf50;
+    padding:14px 18px; border-radius:0 6px 6px 0; margin:16px 0;
+    font-size:14px; color:#558b2f;
+  }
+  .warn {
+    background:#fff3e0; border-left:4px solid #ff9800;
+    padding:14px 18px; border-radius:0 6px 6px 0; margin:16px 0;
+    font-size:14px; color:#e65100;
+  }
+  code {
+    background:#f5f5f5; padding:2px 8px; border-radius:3px;
+    font-size:13px; font-family: "SF Mono","Consolas",monospace;
+  }
+  .img-placeholder {
+    background:#f0f0f0; border:1px dashed #ccc; border-radius:8px;
+    height:200px; display:flex; align-items:center; justify-content:center;
+    color:#bbb; font-size:14px; margin:16px 0;
+  }
+
+  footer {
+    text-align:center; padding:32px; font-size:13px; color:#bbb;
+    border-top:1px solid #eee; margin-top:40px;
+  }
+
+  @media(max-width:640px) {
+    nav { padding:0 20px; }
+    .container { padding:70px 16px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo" style="text-decoration:none;">📖 师说 · 使用手册</a>
+  <div class="links">
+    <a href="index.html">← 返回首页</a>
+  </div>
+</nav>
+
+<div class="container">
+
+<div class="page-title">
+  <h1>📖 使用手册</h1>
+  <p>快速上手「师说」教室通知系统</p>
+</div>
+
+<div class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li><a href="#quickstart">快速开始</a></li>
+    <li><a href="#teacher">教师端使用</a></li>
+    <li><a href="#classroom">教室端部署</a></li>
+    <li><a href="#camera">摄像头监控</a></li>
+    <li><a href="#faq">常见问题</a></li>
+  </ol>
+</div>
+
+<section id="quickstart">
+  <h2>一、快速开始</h2>
+
+  <h3>系统要求</h3>
+  <ul>
+    <li><strong>教师端</strong>：Windows 10/11，无需安装 Node.js（已打包为 exe）</li>
+    <li><strong>教室端</strong>：Windows 10/11（自带 Edge WebView2），需从源码构建</li>
+    <li><strong>网络</strong>：教室电脑和办公室电脑需在同一局域网内</li>
+  </ul>
+
+  <h3>5 分钟部署</h3>
+  <div class="card">
+    <h4>第一步：教师端启动</h4>
+    <p>下载 <code>教室通知-教师端.exe</code>，双击运行。服务端自动启动，浏览器自动打开发送页面。</p>
+  </div>
+  <div class="card">
+    <h4>第二步：配置班级</h4>
+    <p>在发送页面输入班级名称（如"1班""2班"），点击「+ 添加班级」。</p>
+  </div>
+  <div class="card">
+    <h4>第三步：教室端连接</h4>
+    <p>在教室电脑上安装教室端程序，右键托盘图标 → 设置 → 填入教室名称和教师端 IP 地址。</p>
+  </div>
+  <div class="card">
+    <h4>第四步：发送通知</h4>
+    <p>在教师端勾选目标班级，输入通知内容，按 Enter 发送。教室电脑即刻全屏展示。</p>
+  </div>
+</section>
+
+<section id="teacher">
+  <h2>二、教师端使用</h2>
+
+  <h3>界面概览</h3>
+  <p>教师端是一个 Web 页面，包含以下区域：</p>
+  <ul>
+    <li><strong>顶部状态栏</strong>：显示在线教室数量和名称</li>
+    <li><strong>教室管理面板</strong>：添加、编辑、删除班级，查看在线状态</li>
+    <li><strong>发送区域</strong>：输入通知文字，按 Enter 发送</li>
+    <li><strong>发送历史</strong>：查看所有已发送的通知记录</li>
+  </ul>
+
+  <h3>教室管理</h3>
+  <ul>
+    <li><strong>添加</strong>：在输入框中输入班级名称（如"三年级1班"），点击「+ 添加班级」</li>
+    <li><strong>重命名</strong>：点击班级右侧 ✏️ 图标，输入新名称后按 Enter</li>
+    <li><strong>删除</strong>：点击 🗑️ 图标，确认后删除</li>
+    <li><strong>全选</strong>：点击顶部「全选」按钮一键勾选所有班级</li>
+  </ul>
+
+  <div class="tip">
+    💡 <strong>提示</strong>：班级名称会保存在浏览器本地，下次打开无需重新添加。
+  </div>
+
+  <h3>发送通知</h3>
+  <ol>
+    <li>勾选要接收通知的班级（支持多选）</li>
+    <li>在下方的输入框中输入通知内容</li>
+    <li>按 <code>Enter</code> 键或点击「发送」按钮</li>
+    <li>消息即时推送到教室电脑，全屏显示并自动朗读</li>
+  </ol>
+
+  <div class="tip">
+    💡 <strong>提示</strong>：如果目标教室不在线，消息会发送失败并显示错误提示。请确保教室端已启动并连接到同一局域网。
+  </div>
+</section>
+
+<section id="classroom">
+  <h2>三、教室端部署</h2>
+
+  <h3>构建教室端程序</h3>
+  <p>教室端需要在 Windows 电脑上使用 Tauri 构建：</p>
+  <ol>
+    <li>克隆项目：<code>git clone https://github.com/yueraaaa/tongzi.git</code></li>
+    <li>进入目录：<code>cd tongzi/receiver-tauri</code></li>
+    <li>安装依赖：<code>npm install</code></li>
+    <li>构建安装包：<code>npm run tauri build</code></li>
+  </ol>
+  <p>构建产物位于 <code>src-tauri/target/release/bundle/msi/</code>，双击安装即可。</p>
+
+  <div class="warn">
+    ⚠️ <strong>注意</strong>：教室电脑需安装 Edge WebView2（Win10/11 已内置），首次构建需要 Rust 工具链。
+  </div>
+
+  <h3>配置教室端</h3>
+  <ol>
+    <li>安装后，教室端会在系统托盘显示图标</li>
+    <li><strong>右键</strong>托盘图标 → 选择「设置...」</li>
+    <li>填入教室名称（须与教师端配置的名称一致）</li>
+    <li>填入教师端 IP 地址和端口（如 <code>192.168.1.100:3000</code>）</li>
+    <li>点击「保存并重连」</li>
+  </ol>
+
+  <h3>开机自启</h3>
+  <p>将教室端快捷方式放入 Windows 启动文件夹即可实现开机自启：</p>
+  <p>按 <code>Win+R</code>，输入 <code>shell:startup</code>，将教室端快捷方式拖入即可。</p>
+</section>
+
+<section id="camera">
+  <h2>四、摄像头监控</h2>
+
+  <div class="warn">
+    ⚠️ <strong>重要提示</strong>：摄像头功能仅用于教学管理目的。大多数笔记本摄像头有硬件指示灯，打开摄像头时 LED 会亮起。请在合法合规范围内使用。
+  </div>
+
+  <h3>如何使用</h3>
+  <ol>
+    <li>在教师端教室列表中，<strong>在线</strong>教室右侧会出现 📷 图标</li>
+    <li>点击 📷 图标，下方弹出实时画面面板</li>
+    <li>摄像头画面约 3 帧/秒，自动适配窗口大小</li>
+    <li>按 <code>Esc</code> 键或点击「关闭」按钮停止查看</li>
+  </ol>
+
+  <h3>隐私说明</h3>
+  <ul>
+    <li>教室端<strong>无任何提示</strong>，学生看不到正在被查看的迹象</li>
+    <li>摄像头画面仅在教室端→教师端之间通过局域网传输，不经过互联网</li>
+    <li>画面不保存、不录制，关闭后不留痕迹</li>
+  </ul>
+</section>
+
+<section id="faq">
+  <h2>五、常见问题</h2>
+
+  <div class="card">
+    <h4>Q: 教室端显示"离线"怎么办？</h4>
+    <p>检查教室电脑是否已启动教室端程序，确认教室端设置中的 IP 地址和教室名称正确，两台电脑需在同一局域网。</p>
+  </div>
+  <div class="card">
+    <h4>Q: 发送消息后教室端没有反应？</h4>
+    <p>检查教师端是否显示该教室"在线"。确认防火墙未阻止 3000 端口。尝试重启两端的程序。</p>
+  </div>
+  <div class="card">
+    <h4>Q: 语音朗读没有声音？</h4>
+    <p>检查教室电脑音量设置，确认 Windows 语音引擎正常工作。可在 Windows 设置 → 语音 中测试。</p>
+  </div>
+  <div class="card">
+    <h4>Q: 摄像头画面不出来？</h4>
+    <p>确认教室电脑配备摄像头且未被其他应用占用。首次使用需在教室端允许浏览器访问摄像头权限（仅需一次）。</p>
+  </div>
+  <div class="card">
+    <h4>Q: 如何查看教师端 IP 地址？</h4>
+    <p>教师端启动时会在控制台打印局域网 IP。也可在 Windows 命令行输入 <code>ipconfig</code> 查看。</p>
+  </div>
+</section>
+
+<footer>
+  <p>师说 · 教室通知系统 — 让老师的每一句话，都被听见</p>
+</footer>
+
+</div>
+</body>
+</html>
