@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教室通知系统 — 校园即时通讯工具</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    font-family: "PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+    color: #333; background: #fff; line-height:1.7;
+  }
+  a { color:inherit; text-decoration:none; }
+
+  /* Nav */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #eee;
+    padding: 0 40px; height:56px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  nav .logo { font-size:18px; font-weight:700; color:#1a1a2e; }
+  nav .links { display:flex; gap:28px; font-size:14px; color:#666; }
+  nav .links a:hover { color:#4caf50; }
+
+  /* Hero */
+  .hero {
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding: 100px 40px 60px;
+    background: linear-gradient(160deg, #f0faf0 0%, #e8f5e9 30%, #fafafa 100%);
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 64px); font-weight:800;
+    color:#1a1a2e; letter-spacing:-0.02em; margin-bottom:18px;
+  }
+  .hero h1 span { color:#4caf50; }
+  .hero .sub {
+    font-size: clamp(16px, 2.5vw, 20px); color:#666; max-width:580px;
+    margin:0 auto 36px;
+  }
+  .hero .btns { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .btn {
+    display:inline-block; padding:13px 30px; border-radius:8px;
+    font-size:16px; font-weight:600; cursor:pointer; transition:all 0.2s;
+  }
+  .btn-primary { background:#4caf50; color:#fff; }
+  .btn-primary:hover { background:#43a047; transform:translateY(-1px); box-shadow:0 4px 16px rgba(76,175,80,0.35); }
+  .btn-outline { border:2px solid #4caf50; color:#4caf50; background:#fff; }
+  .btn-outline:hover { background:#4caf50; color:#fff; }
+
+  /* Section */
+  section { padding:80px 40px; }
+  .section-title {
+    text-align:center; margin-bottom:56px;
+  }
+  .section-title h2 { font-size:32px; font-weight:700; color:#1a1a2e; margin-bottom:12px; }
+  .section-title p { font-size:16px; color:#888; max-width:520px; margin:0 auto; }
+
+  /* Features */
+  #features { background:#fff; }
+  .features-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:28px; max-width:1000px; margin:0 auto;
+  }
+  .feat-card {
+    background:#fafafa; border:1px solid #eee; border-radius:12px;
+    padding:36px 28px; text-align:center; transition:all 0.2s;
+  }
+  .feat-card:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,0.06); }
+  .feat-icon { font-size:40px; margin-bottom:18px; }
+  .feat-card h3 { font-size:19px; font-weight:700; margin-bottom:10px; color:#1a1a2e; }
+  .feat-card p { font-size:14px; color:#777; }
+
+  /* How it works */
+  #how { background:#fafafa; }
+  .arch {
+    max-width:860px; margin:0 auto; display:flex;
+    align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;
+  }
+  .arch-box {
+    background:#fff; border:2px solid #e0e0e0; border-radius:12px;
+    padding:24px 32px; text-align:center; min-width:200px;
+  }
+  .arch-box.primary { border-color:#4caf50; background:#f1f8e9; }
+  .arch-arrow { font-size:24px; color:#bbb; }
+  .arch-box h4 { font-size:15px; color:#555; margin-bottom:6px; }
+  .arch-box .big { font-size:20px; font-weight:700; color:#1a1a2e; }
+
+  /* Tech */
+  .tech-list {
+    max-width:760px; margin:0 auto; display:grid;
+    grid-template-columns:1fr 1fr; gap:20px;
+  }
+  .tech-item {
+    display:flex; gap:14px; padding:16px; border:1px solid #eee;
+    border-radius:8px; background:#fff;
+  }
+  .tech-item .icon { font-size:24px; flex-shrink:0; }
+  .tech-item .info h4 { font-size:15px; margin-bottom:4px; }
+  .tech-item .info p { font-size:13px; color:#888; }
+
+  /* CTA */
+  #cta {
+    text-align:center;
+    background: linear-gradient(160deg, #1a1a2e 0%, #2d2d44 100%);
+    color:#fff;
+  }
+  #cta h2 { color:#fff; }
+  #cta .section-title p { color:rgba(255,255,255,0.6); }
+  .cta-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:24px; max-width:800px; margin:40px auto 0;
+  }
+  .cta-card {
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px; padding:32px 24px; text-align:center;
+  }
+  .cta-card h3 { font-size:20px; margin-bottom:10px; }
+  .cta-card p { font-size:14px; color:rgba(255,255,255,0.55); margin-bottom:18px; }
+  .cta-card .btn { font-size:14px; padding:10px 24px; }
+
+  /* Footer */
+  footer {
+    text-align:center; padding:32px; font-size:13px; color:#aaa;
+    border-top:1px solid #eee;
+  }
+
+  @media(max-width:640px) {
+    nav { padding:0 20px; }
+    nav .links { display:none; }
+    section { padding:60px 20px; }
+    .arch { flex-direction:column; }
+    .arch-arrow { transform:rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🏫 教室通知系统</div>
+  <div class="links">
+    <a href="#features">功能</a>
+    <a href="#how">架构</a>
+    <a href="#tech">技术</a>
+    <a href="#cta">下载</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div>
+    <h1>教室<span>通知</span>系统</h1>
+    <p class="sub">
+      一款面向学校的局域网通讯工具。老师在办公室发送通知，
+      教室电脑自动全屏展示并语音朗读，支持摄像头实时查看教室画面。
+    </p>
+    <div class="btns">
+      <a href="#cta" class="btn btn-primary">立即使用</a>
+      <a href="#features" class="btn btn-outline">了解更多</a>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="section-title">
+    <h2>核心功能</h2>
+    <p>专为学校场景设计，简单、高效、零学习成本</p>
+  </div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📢</div>
+      <h3>即时通知推送</h3>
+      <p>老师在办公室输入通知内容，选择目标班级，一键发送。教室电脑全屏展示通知文字，无需学生操作。</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🔊</div>
+      <h3>自动语音朗读</h3>
+      <p>通知到达时自动调用 Windows 系统语音引擎，用标准普通话朗读通知内容，确保每位学生都能听到。</p>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📷</div>
+      <h3>静默摄像头监控</h3>
+      <p>老师可随时查看任意在线教室的摄像头画面，教室端无任何提示，学生完全不知情。</p>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="section-title">
+    <h2>系统架构</h2>
+    <p>基于局域网通信，无需互联网</p>
+  </div>
+  <div class="arch">
+    <div class="arch-box primary">
+      <h4>教师端</h4>
+      <div class="big">💻 办公室电脑</div>
+      <p style="font-size:13px;color:#888;margin-top:6px;">发送通知 · 查看摄像头</p>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box">
+      <h4>服务端</h4>
+      <div class="big">⚡ Node.js</div>
+      <p style="font-size:13px;color:#888;margin-top:6px;">消息中转 · 实时推送</p>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box primary">
+      <h4>教室端 × N</h4>
+      <div class="big">🖥️ 教室电脑</div>
+      <p style="font-size:13px;color:#888;margin-top:6px;">全屏展示 · 语音朗读</p>
+    </div>
+  </div>
+</section>
+
+<section id="tech">
+  <div class="section-title">
+    <h2>技术栈</h2>
+    <p>轻量高效，教室端打包仅 8MB</p>
+  </div>
+  <div class="tech-list">
+    <div class="tech-item">
+      <div class="icon">🟢</div>
+      <div class="info">
+        <h4>Node.js + Socket.IO</h4>
+        <p>服务端实时消息推送，毫秒级延迟，支持断线自动重连。</p>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="icon">⚛️</div>
+      <div class="info">
+        <h4>React + TypeScript</h4>
+        <p>教师端 Web 界面，响应式设计，支持多教室管理与消息历史。</p>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="icon">🦀</div>
+      <div class="info">
+        <h4>Tauri (Rust)</h4>
+        <p>教室端桌面应用，常驻系统托盘，内存占用仅 ~25MB。</p>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="icon">🔊</div>
+      <div class="info">
+        <h4>Web Speech API</h4>
+        <p>调用浏览器内置语音引擎，支持中文普通话离线朗读。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cta">
+  <div class="section-title">
+    <h2>开始使用</h2>
+    <p>免费开源，支持 Windows 10/11</p>
+  </div>
+  <div class="cta-grid">
+    <div class="cta-card">
+      <h3>👩‍🏫 教师端</h3>
+      <p>安装在办公室电脑上，发送通知、管理教室、查看摄像头</p>
+      <a href="https://github.com" class="btn btn-primary">下载教师端</a>
+    </div>
+    <div class="cta-card">
+      <h3>🏫 教室端</h3>
+      <p>安装在各教室电脑上，自动接收通知、全屏展示、语音朗读</p>
+      <a href="https://github.com" class="btn btn-outline">下载教室端</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>教室通知系统 · 开源项目 · 适用于 Windows 10/11 校园局域网环境</p>
+</footer>
+
+</body>
+</html>

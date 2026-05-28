@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "start": "tsx server/index.ts",
-    "dev:server": "tsx server/index.ts"
+    "dev:server": "tsx server/index.ts",
+    "bundle:server": "esbuild server/index.ts --bundle --platform=node --format=cjs --outfile=dist-server/bundle.cjs",
+    "build:exe": "npm run build && npm run bundle:server && npm run pack:exe",
+    "pack:exe": "pkg dist-server/bundle.cjs --targets node22-macos-x64,node22-win-x64 --output release/teacher-notify",
+    "pack:win": "pkg dist-server/bundle.cjs --targets node22-win-x64 --output release/教室通知-教师端"
+  },
+  "pkg": {
+    "assets": ["dist/**/*"]
   },
   "dependencies": {
     "express": "^4.21.0",
@@ -22,6 +29,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "@yao-pkg/pkg": "^6.3.0",
+    "esbuild": "^0.25.0",
     "tsx": "^4.19.0",
     "typescript": "~5.6.0",
     "vite": "^6.0.0"

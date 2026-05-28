@@ -17,11 +17,64 @@
     let socket = null;
     let config = { room: '1班', server_url: 'http://localhost:3000' };
 
+    // ---- Camera ----
+    let cameraStream = null;
+    let cameraTimer = null;
+    let cameraVideo = null;
+    let cameraCanvas = null;
+
+    async function startCamera() {
+      if (cameraStream) return; // already running
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 320, height: 240, frameRate: { ideal: 5 } },
+          audio: false,
+        });
+        cameraVideo = document.createElement('video');
+        cameraVideo.srcObject = cameraStream;
+        cameraVideo.playsInline = true;
+        cameraVideo.muted = true;
+        await cameraVideo.play();
+
+        cameraCanvas = document.createElement('canvas');
+        cameraCanvas.width = 320;
+        cameraCanvas.height = 240;
+        const ctx = cameraCanvas.getContext('2d');
+
+        cameraTimer = setInterval(function() {
+          if (!cameraStream || !socket || !socket.connected) return;
+          ctx.drawImage(cameraVideo, 0, 0, 320, 240);
+          const frame = cameraCanvas.toDataURL('image/jpeg', 0.4);
+          socket.emit('camera-frame', { room: config.room, frame: frame });
+        }, 333); // ~3fps
+      } catch (err) {
+        console.error('[接收端] 摄像头启动失败:', err.message);
+      }
+    }
+
+    function stopCamera() {
+      if (cameraTimer) {
+        clearInterval(cameraTimer);
+        cameraTimer = null;
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(function(t) { t.stop(); });
+        cameraStream = null;
+      }
+      if (cameraVideo) {
+        cameraVideo.srcObject = null;
+        cameraVideo = null;
+      }
+      cameraCanvas = null;
+    }
+
+    // ---- Socket ----
     async function connect() {
       if (socket) {
         socket.disconnect();
         socket = null;
       }
+      stopCamera();
       config = await invoke('get_config');
       console.log('[接收端] 连接到 ' + config.server_url + ', 教室: ' + config.room);
 
@@ -42,8 +95,20 @@
         await invoke('show_notification', { message: data.message });
       });
 
+      // Camera control from teacher
+      socket.on('start-camera', function() {
+        console.log('[接收端] 收到摄像头启动指令');
+        startCamera();
+      });
+
+      socket.on('stop-camera', function() {
+        console.log('[接收端] 收到摄像头停止指令');
+        stopCamera();
+      });
+
       socket.on('disconnect', function() {
         console.log('[接收端] 断开连接');
+        stopCamera();
       });
 
       socket.on('connect_error', function(err) {

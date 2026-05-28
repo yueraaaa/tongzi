@@ -21,3 +21,9 @@ Thumbs.db
 
 # Env
 .env
+
+# Build artifacts
+dist-server/
+release/
+.netlify/
+.netlify/
