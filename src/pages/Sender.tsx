@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 
 const STORAGE_KEY = 'tongzi-classrooms'
+const SECRET_KEY = 'tongzi-secret'
 
 interface HistoryItem {
   id: number
@@ -50,69 +51,73 @@ export default function Sender() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
 
-  // Persist classrooms
-  useEffect(() => {
-    saveClassrooms(configuredRooms)
-  }, [configuredRooms])
+  // Auth
+  const [secret, setSecret] = useState(() => localStorage.getItem(SECRET_KEY) || '')
+  const [showSecretInput, setShowSecretInput] = useState(!localStorage.getItem(SECRET_KEY))
+  const [secretInput, setSecretInput] = useState('')
+  const [authError, setAuthError] = useState('')
 
-  // Focus edit input when editing starts
-  useEffect(() => {
-    if (editingRoom) editInputRef.current?.focus()
-  }, [editingRoom])
+  // Persist classrooms
+  useEffect(() => { saveClassrooms(configuredRooms) }, [configuredRooms])
+  useEffect(() => { if (editingRoom) editInputRef.current?.focus() }, [editingRoom])
 
   // Socket
   useEffect(() => {
-    const s = io('/', { transports: ['websocket', 'polling'] })
+    if (!secret) return
+    const s = io('/', {
+      transports: ['websocket', 'polling'],
+      query: { key: secret },
+    })
     setSocket(s)
 
     s.on('room-list', (list: string[]) => setOnlineRooms(list))
-
     s.on('connect', () => {
-      fetch('/api/rooms')
+      setAuthError('')
+      fetch('/api/rooms', { headers: { 'x-auth-key': secret } })
         .then((r) => r.json())
         .then((data) => setOnlineRooms(data.rooms))
         .catch(() => {})
     })
-
+    s.on('auth-error', (msg: string) => {
+      setAuthError(msg)
+      s.disconnect()
+    })
     s.on('camera-frame', (data: { room: string; frame: string }) => {
-      if (cameraFrameRef.current === data.room) {
-        setCameraFrame(data.frame)
-      }
+      if (cameraFrameRef.current === data.room) setCameraFrame(data.frame)
     })
 
     return () => { s.disconnect() }
-  }, [])
+  }, [secret])
 
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  function saveSecret() {
+    const val = secretInput.trim()
+    if (!val) return
+    localStorage.setItem(SECRET_KEY, val)
+    setSecret(val)
+    setShowSecretInput(false)
+    setAuthError('')
+  }
 
   // ---- camera ----
   function openCamera(room: string) {
-    if (cameraRoom === room) {
-      closeCamera()
-      return
-    }
+    if (cameraRoom === room) { closeCamera(); return }
     closeCamera()
     cameraFrameRef.current = room
     setCameraRoom(room)
     setCameraFrame(null)
     socket?.emit('start-camera', { room })
   }
-
   function closeCamera() {
     if (cameraRoom) socket?.emit('stop-camera', { room: cameraRoom })
     cameraFrameRef.current = null
     setCameraRoom(null)
     setCameraFrame(null)
   }
-
-  // Close camera on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && cameraRoom) {
-        closeCamera()
-      }
+      if (e.key === 'Escape' && cameraRoom) closeCamera()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -125,110 +130,56 @@ export default function Sender() {
     setConfiguredRooms((prev) => [...prev, name])
     setNewRoomName('')
   }
-
-  function startEdit(name: string) {
-    setEditingRoom(name)
-    setEditValue(name)
-    setConfirmDelete(null)
-  }
-
+  function startEdit(name: string) { setEditingRoom(name); setEditValue(name); setConfirmDelete(null) }
   function saveEdit(oldName: string) {
     const newName = editValue.trim()
-    if (!newName || newName === oldName || configuredRooms.includes(newName)) {
-      setEditingRoom(null)
-      return
-    }
+    if (!newName || newName === oldName || configuredRooms.includes(newName)) { setEditingRoom(null); return }
     setConfiguredRooms((prev) => prev.map((r) => (r === oldName ? newName : r)))
-    setSelectedRooms((prev) => {
-      const next = new Set(prev)
-      if (next.has(oldName)) {
-        next.delete(oldName)
-        next.add(newName)
-      }
-      return next
-    })
-    if (cameraRoom === oldName) {
-      closeCamera()
-    }
+    setSelectedRooms((prev) => { const n = new Set(prev); if (n.has(oldName)) { n.delete(oldName); n.add(newName) } return n })
+    if (cameraRoom === oldName) closeCamera()
     setEditingRoom(null)
   }
-
-  function cancelEdit() {
-    setEditingRoom(null)
-    setEditValue('')
-  }
-
-  function requestDelete(name: string) {
-    setConfirmDelete(name)
-    setEditingRoom(null)
-  }
-
+  function cancelEdit() { setEditingRoom(null); setEditValue('') }
+  function requestDelete(name: string) { setConfirmDelete(name); setEditingRoom(null) }
   function confirmDeleteRoom(name: string) {
     setConfiguredRooms((prev) => prev.filter((r) => r !== name))
-    setSelectedRooms((prev) => {
-      const next = new Set(prev)
-      next.delete(name)
-      return next
-    })
+    setSelectedRooms((prev) => { const n = new Set(prev); n.delete(name); return n })
     if (cameraRoom === name) closeCamera()
     setConfirmDelete(null)
   }
-
-  function cancelDelete() {
-    setConfirmDelete(null)
-  }
-
+  function cancelDelete() { setConfirmDelete(null) }
   function toggleRoom(name: string) {
-    setSelectedRooms((prev) => {
-      const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
-      return next
-    })
+    setSelectedRooms((prev) => { const n = new Set(prev); n.has(name) ? n.delete(name) : n.add(name); return n })
   }
-
   function selectAll() {
-    if (selectedRooms.size === configuredRooms.length && configuredRooms.length > 0) {
-      setSelectedRooms(new Set())
-    } else {
-      setSelectedRooms(new Set(configuredRooms))
-    }
+    if (selectedRooms.size === configuredRooms.length && configuredRooms.length > 0) setSelectedRooms(new Set())
+    else setSelectedRooms(new Set(configuredRooms))
   }
 
   // ---- send ----
   function addHistory(roomLabel: string, msg: string, sent: boolean) {
-    const item: HistoryItem = {
+    setHistory((prev) => [{
       id: ++historyId.current,
-      rooms: roomLabel,
-      message: msg,
+      rooms: roomLabel, message: msg,
       time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
       sent,
-    }
-    setHistory((prev) => [item, ...prev].slice(0, 50))
+    }, ...prev].slice(0, 50))
   }
-
   async function handleSend() {
     const trimmed = message.trim()
     if (!trimmed) return
     const targets = Array.from(selectedRooms)
     if (targets.length === 0) return
-
-    setSending(true)
-    setStatus('')
+    setSending(true); setStatus('')
     try {
       const res = await fetch('/api/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rooms: targets.includes('__all__') ? ['__all__'] : targets,
-          message: trimmed,
-        }),
+        headers: { 'Content-Type': 'application/json', 'x-auth-key': secret },
+        body: JSON.stringify({ rooms: targets, message: trimmed }),
       })
       if (res.ok) {
-        const label = targets.includes('__all__') ? '全部教室' : targets.join('、')
-        addHistory(label, trimmed, true)
-        setMessage('')
-        setStatus('已发送')
+        addHistory(targets.join('、'), trimmed, true)
+        setMessage(''); setStatus('已发送')
         setTimeout(() => setStatus(''), 2000)
       } else {
         const err = await res.json()
@@ -238,27 +189,58 @@ export default function Sender() {
       }
     } catch {
       addHistory(targets.join('、'), trimmed, false)
-      setStatus('网络错误，请检查服务端')
+      setStatus('网络错误')
       setTimeout(() => setStatus(''), 3000)
-    } finally {
-      setSending(false)
-      inputRef.current?.focus()
-    }
+    } finally { setSending(false); inputRef.current?.focus() }
   }
-
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
   const allSelected = configuredRooms.length > 0 && selectedRooms.size === configuredRooms.length
 
+  // Secret key prompt
+  if (showSecretInput) {
+    return (
+      <div className="sender-page">
+        <div style={{ maxWidth: 440, margin: '120px auto', textAlign: 'center' }}>
+          <h1 style={{ fontSize: 26, marginBottom: 12 }}>🔐 输入安全密钥</h1>
+          <p style={{ color: '#888', marginBottom: 24, fontSize: 14 }}>
+            请查看教师端启动时的控制台输出，输入显示的密钥
+          </p>
+          <input
+            type="password"
+            value={secretInput}
+            onChange={(e) => setSecretInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') saveSecret() }}
+            placeholder="32位十六进制密钥"
+            style={{
+              width: '100%', padding: '12px 16px', border: '1.5px solid #ddd',
+              borderRadius: 8, fontSize: 16, outline: 'none', textAlign: 'center',
+              fontFamily: 'monospace', letterSpacing: 2,
+            }}
+            autoFocus
+          />
+          <button
+            onClick={saveSecret}
+            disabled={!secretInput.trim()}
+            style={{
+              marginTop: 16, padding: '12px 40px', background: '#4caf50', color: '#fff',
+              border: 'none', borderRadius: 8, fontSize: 16, cursor: 'pointer',
+            }}
+          >
+            确认
+          </button>
+          {authError && <p style={{ color: '#e53935', marginTop: 12, fontSize: 13 }}>{authError}</p>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="sender-page">
       <header className="sender-header">
-        <h1>教室通知系统</h1>
+        <h1>师说 · 教室通知系统</h1>
         <div className="online-info">
           <span className="online-dot" />
           在线教室：{onlineRooms.length > 0 ? onlineRooms.join('、') : '无'}
@@ -266,7 +248,6 @@ export default function Sender() {
       </header>
 
       <main className="sender-main">
-        {/* ---- Classroom Management ---- */}
         <section className="classroom-panel">
           <div className="panel-header">
             <h2>教室管理</h2>
@@ -279,14 +260,9 @@ export default function Sender() {
           </div>
 
           <div className="add-room-row">
-            <input
-              type="text"
-              className="add-room-input"
-              placeholder="输入班级名称，如：1班"
-              value={newRoomName}
-              onChange={(e) => setNewRoomName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') addClassroom() }}
-            />
+            <input type="text" className="add-room-input" placeholder="输入班级名称，如：1班"
+              value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addClassroom() }} />
             <button className="add-room-btn" onClick={addClassroom} disabled={!newRoomName.trim()}>
               + 添加班级
             </button>
@@ -300,31 +276,18 @@ export default function Sender() {
                 const viewing = cameraRoom === name
                 const isEditing = editingRoom === name
                 const isDeleting = confirmDelete === name
-
                 return (
-                  <div
-                    key={name}
-                    className={`room-row ${checked ? 'checked' : ''} ${viewing ? 'viewing' : ''} ${isEditing ? 'editing' : ''} ${isDeleting ? 'deleting' : ''}`}
-                  >
+                  <div key={name} className={`room-row ${checked ? 'checked' : ''} ${viewing ? 'viewing' : ''} ${isEditing ? 'editing' : ''} ${isDeleting ? 'deleting' : ''}`}>
                     {isEditing ? (
-                      // ---- Edit mode ----
                       <>
                         <input type="checkbox" checked={checked} disabled className="room-check" />
-                        <input
-                          ref={editInputRef}
-                          className="edit-input"
-                          value={editValue}
+                        <input ref={editInputRef} className="edit-input" value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') saveEdit(name)
-                            if (e.key === 'Escape') cancelEdit()
-                          }}
-                        />
+                          onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(name); if (e.key === 'Escape') cancelEdit() }} />
                         <button className="icon-btn confirm" onClick={() => saveEdit(name)} title="保存">✓</button>
                         <button className="icon-btn cancel" onClick={cancelEdit} title="取消">✕</button>
                       </>
                     ) : isDeleting ? (
-                      // ---- Delete confirmation ----
                       <>
                         <input type="checkbox" checked={checked} disabled className="room-check" />
                         <span className="delete-msg">确定删除「{name}」？</span>
@@ -332,35 +295,18 @@ export default function Sender() {
                         <button className="icon-btn cancel" onClick={cancelDelete} title="取消">✕</button>
                       </>
                     ) : (
-                      // ---- Normal mode ----
                       <>
-                        <input
-                          type="checkbox"
-                          className="room-check"
-                          checked={checked}
-                          onChange={() => toggleRoom(name)}
-                        />
+                        <input type="checkbox" className="room-check" checked={checked} onChange={() => toggleRoom(name)} />
                         <span className="room-emoji">🏫</span>
                         <span className="room-name">{name}</span>
-                        <span className={`room-badge ${online ? 'on' : 'off'}`}>
-                          {online ? '在线' : '离线'}
-                        </span>
+                        <span className={`room-badge ${online ? 'on' : 'off'}`}>{online ? '在线' : '离线'}</span>
                         <span className="room-actions">
-                          <button
-                            className={`icon-btn ${online ? (viewing ? 'danger' : 'camera') : 'camera-off'}`}
+                          <button className={`icon-btn ${online ? (viewing ? 'danger' : 'camera') : 'camera-off'}`}
                             onClick={() => online ? openCamera(name) : null}
                             title={online ? (viewing ? '停止查看' : '查看教室摄像头') : '教室离线，无法查看'}
-                            disabled={!online}
-                          >
-                            {viewing ? '⏹' : '📷'}
-                          </button>
-
-                          <button className="icon-btn edit" onClick={() => startEdit(name)} title="重命名">
-                            ✏️
-                          </button>
-                          <button className="icon-btn del" onClick={() => requestDelete(name)} title="删除">
-                            🗑️
-                          </button>
+                            disabled={!online}>{viewing ? '⏹' : '📷'}</button>
+                          <button className="icon-btn edit" onClick={() => startEdit(name)} title="重命名">✏️</button>
+                          <button className="icon-btn del" onClick={() => requestDelete(name)} title="删除">🗑️</button>
                         </span>
                       </>
                     )}
@@ -369,11 +315,7 @@ export default function Sender() {
               })}
             </div>
           )}
-
-          {configuredRooms.length === 0 && (
-            <div className="empty-hint">尚未添加教室，请在上方输入班级名称并添加</div>
-          )}
-
+          {configuredRooms.length === 0 && <div className="empty-hint">尚未添加教室，请在上方输入班级名称并添加</div>}
           {configuredRooms.length > 0 && (
             <div className="selected-bar">
               <span>已选 {selectedRooms.size}/{configuredRooms.length} 个教室</span>
@@ -382,7 +324,6 @@ export default function Sender() {
           )}
         </section>
 
-        {/* ---- Camera View ---- */}
         {cameraRoom && (
           <section className="camera-panel">
             <div className="camera-header">
@@ -391,45 +332,26 @@ export default function Sender() {
               <button className="camera-close" onClick={closeCamera}>关闭 ✕</button>
             </div>
             <div className="camera-view">
-              {cameraFrame ? (
-                <img src={cameraFrame} alt={cameraRoom + '教室画面'} className="camera-img" />
-              ) : (
-                <div className="camera-loading">
-                  <div className="camera-spinner" />
-                  正在获取摄像头画面...
-                </div>
-              )}
+              {cameraFrame ? <img src={cameraFrame} alt={cameraRoom + '教室画面'} className="camera-img" /> :
+                <div className="camera-loading"><div className="camera-spinner" />正在获取摄像头画面...</div>}
             </div>
           </section>
         )}
 
-        {/* ---- Compose ---- */}
         <section className="compose-area">
           <div className="input-row">
-            <input
-              ref={inputRef}
-              type="text"
-              className="message-input"
+            <input ref={inputRef} type="text" className="message-input"
               placeholder="输入通知内容，按 Enter 发送..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={sending}
-            />
-            <button
-              className="send-btn"
-              onClick={handleSend}
-              disabled={sending || !message.trim() || selectedRooms.size === 0}
-            >
+              value={message} onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown} disabled={sending} />
+            <button className="send-btn" onClick={handleSend}
+              disabled={sending || !message.trim() || selectedRooms.size === 0}>
               发送{selectedRooms.size > 0 ? ` (${selectedRooms.size}班)` : ''}
             </button>
           </div>
-          {status && (
-            <div className={`status-msg ${status === '已发送' ? 'ok' : 'err'}`}>{status}</div>
-          )}
+          {status && <div className={`status-msg ${status === '已发送' ? 'ok' : 'err'}`}>{status}</div>}
         </section>
 
-        {/* ---- History ---- */}
         {history.length > 0 && (
           <section className="history">
             <h2>发送记录</h2>

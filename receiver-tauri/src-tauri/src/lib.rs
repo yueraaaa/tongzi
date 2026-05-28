@@ -10,6 +10,7 @@ use tauri::{
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Config {
+    secret_key: String,
     room: String,
     server_url: String,
 }
@@ -19,6 +20,7 @@ impl Default for Config {
         Self {
             room: "1班".to_string(),
             server_url: "http://localhost:3000".to_string(),
+            secret_key: "".to_string(),
         }
     }
 }
@@ -35,10 +37,11 @@ fn get_config(state: tauri::State<AppState>) -> Config {
 }
 
 #[tauri::command]
-fn save_config(state: tauri::State<AppState>, room: String, server_url: String) -> Config {
+fn save_config(state: tauri::State<AppState>, room: String, server_url: String, secret_key: String) -> Config {
     let mut config = state.config.lock().unwrap();
     config.room = room.clone();
     config.server_url = server_url.clone();
+    config.secret_key = secret_key.clone();
     let _ = fs::write(
         &state.config_path,
         serde_json::to_string_pretty(&*config).unwrap(),

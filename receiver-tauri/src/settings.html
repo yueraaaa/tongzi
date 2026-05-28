@@ -26,6 +26,7 @@
     .btn-cancel { background: #e0e0e0; color: #333; }
     .btn-cancel:hover { background: #d0d0d0; }
     .status { margin-top: 10px; font-size: 13px; color: #4caf50; }
+    .hint { font-size: 11px; color: #aaa; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -37,6 +38,12 @@
   <div class="field">
     <label>服务器地址</label>
     <input type="text" id="serverUrl" placeholder="http://192.168.1.100:3000" />
+    <div class="hint">教师端 IP 地址 + 端口</div>
+  </div>
+  <div class="field">
+    <label>安全密钥</label>
+    <input type="password" id="secretKey" placeholder="教师端启动时显示的密钥" />
+    <div class="hint">在教师端启动时的控制台输出中可找到</div>
   </div>
   <div class="btns">
     <button class="btn-save" id="saveBtn">保存并重连</button>
@@ -48,18 +55,20 @@
     var invoke = window.__TAURI__.core.invoke;
 
     invoke('get_config').then(function(config) {
-      document.getElementById('room').value = config.room;
-      document.getElementById('serverUrl').value = config.server_url;
+      document.getElementById('room').value = config.room || '';
+      document.getElementById('serverUrl').value = config.server_url || '';
+      document.getElementById('secretKey').value = config.secret_key || '';
     });
 
     document.getElementById('saveBtn').addEventListener('click', async function() {
       var room = document.getElementById('room').value.trim();
       var serverUrl = document.getElementById('serverUrl').value.trim();
-      if (!room || !serverUrl) {
-        document.getElementById('status').textContent = '请填写完整信息';
+      var secretKey = document.getElementById('secretKey').value.trim();
+      if (!room || !serverUrl || !secretKey) {
+        document.getElementById('status').textContent = '请填写所有字段';
         return;
       }
-      await invoke('save_config', { room: room, serverUrl: serverUrl });
+      await invoke('save_config', { room: room, serverUrl: serverUrl, secretKey: secretKey });
       document.getElementById('status').textContent = '已保存，正在重连...';
       setTimeout(function() {
         window.__TAURI__.window.getCurrent().close();

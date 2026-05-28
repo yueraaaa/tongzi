@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>教室通知接收端</title>
-  <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
+  <script src="socket.io.min.js"></script>
   <style>
     body { background: transparent; margin: 0; }
   </style>
@@ -15,7 +15,7 @@
     const { listen } = window.__TAURI__.event;
 
     let socket = null;
-    let config = { room: '1班', server_url: 'http://localhost:3000' };
+    let config = { room: '1班', server_url: 'http://localhost:3000', secret_key: '' };
 
     // ---- Camera ----
     let cameraStream = null;
@@ -24,7 +24,7 @@
     let cameraCanvas = null;
 
     async function startCamera() {
-      if (cameraStream) return; // already running
+      if (cameraStream) return;
       try {
         cameraStream = await navigator.mediaDevices.getUserMedia({
           video: { width: 320, height: 240, frameRate: { ideal: 5 } },
@@ -39,47 +39,41 @@
         cameraCanvas = document.createElement('canvas');
         cameraCanvas.width = 320;
         cameraCanvas.height = 240;
-        const ctx = cameraCanvas.getContext('2d');
+        var ctx = cameraCanvas.getContext('2d');
 
         cameraTimer = setInterval(function() {
           if (!cameraStream || !socket || !socket.connected) return;
           ctx.drawImage(cameraVideo, 0, 0, 320, 240);
-          const frame = cameraCanvas.toDataURL('image/jpeg', 0.4);
+          var frame = cameraCanvas.toDataURL('image/jpeg', 0.4);
           socket.emit('camera-frame', { room: config.room, frame: frame });
-        }, 333); // ~3fps
+        }, 333);
       } catch (err) {
         console.error('[接收端] 摄像头启动失败:', err.message);
       }
     }
 
     function stopCamera() {
-      if (cameraTimer) {
-        clearInterval(cameraTimer);
-        cameraTimer = null;
-      }
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(function(t) { t.stop(); });
-        cameraStream = null;
-      }
-      if (cameraVideo) {
-        cameraVideo.srcObject = null;
-        cameraVideo = null;
-      }
+      if (cameraTimer) { clearInterval(cameraTimer); cameraTimer = null; }
+      if (cameraStream) { cameraStream.getTracks().forEach(function(t) { t.stop(); }); cameraStream = null; }
+      if (cameraVideo) { cameraVideo.srcObject = null; cameraVideo = null; }
       cameraCanvas = null;
     }
 
     // ---- Socket ----
     async function connect() {
-      if (socket) {
-        socket.disconnect();
-        socket = null;
-      }
+      if (socket) { socket.disconnect(); socket = null; }
       stopCamera();
       config = await invoke('get_config');
+
+      if (!config.secret_key) {
+        console.error('[接收端] 未配置安全密钥，请在设置中填写');
+        return;
+      }
+
       console.log('[接收端] 连接到 ' + config.server_url + ', 教室: ' + config.room);
 
       socket = io(config.server_url, {
-        query: { room: config.room },
+        query: { room: config.room, key: config.secret_key },
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionDelay: 1000,
@@ -90,12 +84,16 @@
         console.log('[接收端] 已连接');
       });
 
+      socket.on('auth-error', function(msg) {
+        console.error('[接收端] 认证失败: ' + msg);
+        socket.disconnect();
+      });
+
       socket.on('notification', async function(data) {
         console.log('[接收端] 收到通知: ' + data.message);
         await invoke('show_notification', { message: data.message });
       });
 
-      // Camera control from teacher
       socket.on('start-camera', function() {
         console.log('[接收端] 收到摄像头启动指令');
         startCamera();
